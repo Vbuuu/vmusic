@@ -1,22 +1,23 @@
 from nextcord import slash_command, Interaction, SlashOption
 from nextcord.ext import commands
-from ApiKeys import guildIds
+from nextcord.ext.application_checks import has_permissions
+from nextcord.ext.commands import Bot, Context, CommandError
+
+from src.ApiKeys import guildIds
+
 
 class Testing(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         self.bot = bot
-    
-    
+
     @slash_command(name="hello", description="Greet the bot", guild_ids=guildIds)
     async def hello(self, interaction: Interaction):
         await interaction.response.send_message(f"Fuck off {interaction.user.display_name}!")
-    
-    @slash_command(name="clear", description="Clears chat messages", guild_ids=guildIds)
-    async def clear(self, interaction: Interaction, amount: int = SlashOption(name="amount", description="How many messages should be cleared", required=False, min_value=2, max_value=999, default=0)):
-        await interaction.response.send_message(f"Clearing the chat!", ephemeral=True)
-        await interaction.channel.purge() if amount == 0 else await interaction.channel.purge(limit=amount)
-        print(amount)
+
+    @slash_command(name="ping", description="Pong!", guild_ids=guildIds)
+    async def ping(self, interaction: Interaction):
+        await interaction.response.send_message(f"Pong ({int(self.bot.latency*1000)}ms)", delete_after=10)
 
 
-def setup(bot):
+def setup(bot: Bot):
     bot.add_cog(Testing(bot))

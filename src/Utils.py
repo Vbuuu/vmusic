@@ -9,35 +9,36 @@ import sys
 
 logger = logging.getLogger("vmusic")
 
+
 def setupLogger():
     directory = "./../run/logs/"
     if not os.path.exists(directory):
         os.makedirs(directory)
-    
+
     # renames older log files
-    if os.path.exists(directory+"latest.log"):
-        creationDate = getCreationDate(directory+"latest.log")
+    if os.path.exists(directory + "latest.log"):
+        creationDate = getCreationDate(directory + "latest.log")
         filename = creationDate
 
-        if os.path.exists(directory+filename+".gz"):
+        if os.path.exists(directory + filename + ".gz"):
             counter = 2
-            while os.path.exists(directory+filename+"-"+str(counter)+".gz"):
+            while os.path.exists(directory + filename + "-" + str(counter) + ".gz"):
                 counter += 1
-            filename = creationDate+"-"+str(counter)
-        
-        with open(directory+"latest.log", "r") as lf:
-            with gzip.open(directory+filename+".gz", "w") as gf:
+            filename = creationDate + "-" + str(counter)
+
+        with open(directory + "latest.log", "r") as lf:
+            with gzip.open(directory + filename + ".gz", "w") as gf:
                 gf.write(bytes(lf.read(), "utf-8"))
 
     logger.setLevel(logging.INFO)
-    fileHandler = logging.FileHandler("./../run/logs/latest.log", encoding="utf-8", mode="w")
+    # fileHandler = logging.FileHandler("./../run/logs/latest.log", encoding="utf-8", mode="w")
     streamHandler = logging.StreamHandler(sys.stdout)
 
     formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] (%(name)s) %(message)s", datefmt="%H:%M:%S")
-    fileHandler.setFormatter(formatter)
+    # fileHandler.setFormatter(formatter)
     streamHandler.setFormatter(formatter)
 
-    logger.addHandler(fileHandler)
+    # logger.addHandler(fileHandler)
     logger.addHandler(streamHandler)
 
 
@@ -51,6 +52,6 @@ def getCreationDate(path: str):
         except AttributeError:
             return _unixToDate(stat.st_mtime)
 
-def _unixToDate(timestamp: int):
-    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
 
+def _unixToDate(timestamp: float):
+    return datetime.utcfromtimestamp(timestamp).strftime("%Y-%m-%d")
