@@ -1,10 +1,11 @@
 import nextcord
-from nextcord import slash_command, Interaction, Guild, SelectOption, ButtonStyle
+from nextcord import slash_command, Interaction, SelectOption, ButtonStyle
 from nextcord.ext.application_checks import is_owner
-from nextcord.ext.commands import Cog, Bot, Context, CommandError
+from nextcord.ext.commands import Cog, Bot
 from nextcord.ui import View, Select, button, Button
 
 from src.ApiKeys import configGuildId
+from src.Checks import blacklisted
 from src.Utils import logger
 
 
@@ -44,6 +45,7 @@ class Owner(Cog):
 
     @slash_command(name="server", description="Leave/List Servers", guild_ids=[configGuildId])
     @is_owner()
+    @blacklisted()
     async def server(self, interaction: Interaction):
         await interaction.response.send_message("You have to choose Edit/Leave/List")
 
@@ -60,10 +62,6 @@ class Owner(Cog):
             servers += f"{guild.name} ({guild.id}) \n"
 
         await interaction.response.send_message(servers)
-
-    @server.error
-    async def configError(self, ctx: Context, error: CommandError):
-        await ctx.send(error, delete_after=3)
 
 
 def setup(bot: Bot):

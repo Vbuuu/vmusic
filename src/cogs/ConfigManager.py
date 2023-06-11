@@ -1,11 +1,12 @@
 from nextcord import slash_command, SlashOption, ButtonStyle, Embed, Colour
 from nextcord.ext import commands
 from nextcord.ext.application_checks import has_permissions
-from nextcord.ext.commands import Bot, Context, CommandError
+from nextcord.ext.commands import Bot
 from nextcord.interactions import Interaction
 from nextcord.ui import View, Button, button
 from src.ApiKeys import guildIds
-from src.Config import setJoinSound, isJoinSound, getPrefix, setPrefix
+from src.Checks import blacklisted
+from src.JsonConfig import getPrefix, setPrefix, setJoinSound, getJoinSound
 
 
 class ConfigBooleanView(View):
@@ -19,23 +20,23 @@ class ConfigBooleanView(View):
     @button(label="True", style=ButtonStyle.green)
     async def setTrue(self, button: Button, interaction: Interaction):
         self.setFunction(self.guildId, True)
-        if self.getFunction(str(interaction.guild.id)):
+        if self.getFunction(interaction.guild.id):
             color = Colour.green()
         else:
             color = Colour.red()
         await interaction.response.edit_message(
-            embed=Embed(title="Join Voice Sound", description=f"State: {self.getFunction(str(interaction.guild.id))}",
+            embed=Embed(title="Join Voice Sound", description=f"State: {self.getFunction(interaction.guild.id)}",
                         color=color))
 
     @button(label="False", style=ButtonStyle.red)
     async def setFalse(self, button: Button, interaction: Interaction):
         self.setFunction(self.guildId, False)
-        if self.getFunction(str(interaction.guild.id)):
+        if self.getFunction(interaction.guild.id):
             color = Colour.green()
         else:
             color = Colour.red()
         await interaction.response.edit_message(
-            embed=Embed(title="Join Voice Sound", description=f"State: {self.getFunction(str(interaction.guild.id))}",
+            embed=Embed(title="Join Voice Sound", description=f"State: {self.getFunction(interaction.guild.id)}",
                         color=color))
 
 
@@ -45,24 +46,22 @@ class ConfigManager(commands.Cog):
 
     @slash_command(name="prefix", description="Changes the server prefix", guild_ids=guildIds)
     @has_permissions(administrator=True)
+    @blacklisted()
     async def prefix(self, interaction: Interaction, prefix: str = SlashOption(
         name="prefix",
         description="The new prefix",
         required=True
     )):
         if prefix is not None or prefix == "":
-            setPrefix(str(interaction.guild.id), prefix)
-            await interaction.response.send_message(f"Prefix changed to: {getPrefix(str(interaction.guild.id))}", ephemeral=True)
+            setPrefix(interaction.guild.id, prefix)
+            await interaction.response.send_message(f"Prefix changed to: {getPrefix(interaction.guild.id)}",
+                                                    ephemeral=True)
         else:
             await interaction.response.send_message(f"Invalid prefix.", ephemeral=True)
 
-    @prefix.error
-    async def prefixError(self, ctx: Context, error: CommandError):
-        await ctx.send(error, delete_after=3)
-
-
     @slash_command(name="config", description="Changes bot config on your server", guild_ids=guildIds)
     @has_permissions(administrator=True)
+    @blacklisted()
     async def config(
             self,
             interaction: Interaction,
@@ -75,19 +74,15 @@ class ConfigManager(commands.Cog):
     ) -> None:
         embedView = None
         if setting == "JoinVoiceSound (Boolean)":
-            embedView = booleanEmbedView("Join Voice Sound", str(interaction.guild.id), setJoinSound, isJoinSound)
+            embedView = booleanEmbedView("Join Voice Sound", str(interaction.guild.id), setJoinSound, getJoinSound)
         elif setting == "Prefix (String)":
-            embed = Embed(title="Prefix", description=f"Prefix currently set to: {getPrefix(str(interaction.guild.id))}"
+            embed = Embed(title="Prefix", description=f"Prefix currently set to: {getPrefix(interaction.guild.id)}"
                                                       "\n Use /prefix [prefix] to change it")
 
             await interaction.response.send_message(embed=embed)
 
         if embedView is not None:
             await interaction.response.send_message(embed=embedView[0], view=embedView[1], ephemeral=True)
-
-    @config.error
-    async def configError(self, ctx: Context, error: CommandError):
-        await ctx.send(error, delete_after=3)
 
 
 def booleanEmbedView(name: str, guildId: str, setFunction, getFunction):

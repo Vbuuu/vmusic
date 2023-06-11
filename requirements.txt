@@ -1,2 +1,4 @@
 nextcord[voice]==2.4.2
 python-dotenv==1.0.0
+function-cooldowns==1.7.1
+jsbeautifier==1.14.8

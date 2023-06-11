@@ -1,11 +1,15 @@
+import subprocess
+
 import nextcord
-from nextcord import Intents, Interaction, Embed, SlashOption
+from cooldowns import CallableOnCooldown
+from nextcord import Intents, Interaction, Embed, SlashOption, DiscordException
 from nextcord.ext import commands
 from nextcord.ext.help_commands import PaginatedHelpCommand
 
 from ApiKeys import *
-from Config import collect, setupGuildConfigs, getPrefixBot, getPrefix
 from Utils import logger, setupLogger
+from src.Checks import blacklisted
+from src.JsonConfig import getPrefixBot, collect, setupGuildConfigs, getBlacklist
 
 load_dotenv()
 
@@ -13,10 +17,11 @@ intents = Intents.all()
 bot = commands.Bot(command_prefix=getPrefixBot, intents=intents, help_command=PaginatedHelpCommand())
 blacklist = ["Kick Member"]
 
+
 # TODO: use nextwave musicplayer
 
 
-def getAllCommands(ignoreBlacklisted = False) -> list[str]:
+def getAllCommands(ignoreBlacklisted=False) -> list[str]:
     cogsMap = bot.cogs
     commands = []
 
@@ -42,9 +47,31 @@ async def on_ready():
     await bot.change_presence(activity=nextcord.Activity(type=nextcord.ActivityType.listening, name="/help"))
 
 
+@bot.event
+async def on_application_command_error(interaction: Interaction, error: DiscordException):
+    error = getattr(error, "original", error)
+    if interaction.user.id in getBlacklist(interaction.guild.id):
+        await interaction.response.send_message(
+            "You are blacklisted from using this bot. Talk to your administrator to get permission!", ephemeral=True)
+        logger.error(
+            f"{interaction.user} tried to run a command but he was blacklisted on '{interaction.guild.name}({interaction.guild.id})'")
+    elif isinstance(error, CallableOnCooldown):
+        await interaction.response.send_message(
+            f"You are beeing rate limited! Try again in {int(error.retry_after)} seconds!", ephemeral=True)
+        logger.error(
+            f"{interaction.user} tried to run a command but he was ratelimited for another {int(error.retry_after)}seconds on '{interaction.guild.name}({interaction.guild.id})'")
+    else:
+        await interaction.response.send_message(error, ephemeral=True)
+        logger.error(
+            f"Error: '{error}' on '{interaction.guild.name}({interaction.guild.id})' by {interaction.user}")
+
+
 @bot.slash_command(name="help", description="Shows help", guild_ids=guildIds)
-async def help(interaction: Interaction, command: str = SlashOption(name="command", description="The command you want to have more information about", required=False)):
-    if command == None:
+@blacklisted()
+async def help(interaction: Interaction, command: str = SlashOption(name="command",
+                                                                    description="The command you want to have more information about",
+                                                                    required=False)):
+    if command is None:
         helpMap = {}
         cogsMap = bot.cogs
 
@@ -79,11 +106,12 @@ async def help(interaction: Interaction, command: str = SlashOption(name="comman
                         commands = (cmd.name, cmd.description, key)
 
             embed = Embed(title=commands[2])
-            embed.add_field(name="/"+commands[0], value=commands[1])
+            embed.add_field(name="/" + commands[0], value=commands[1])
 
             await interaction.response.send_message(embed=embed)
         except IndexError:
             await interaction.response.send_message(f"Command {command} not found!", ephemeral=True)
+
 
 
 # main
